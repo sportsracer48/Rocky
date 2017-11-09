@@ -105,8 +105,12 @@ static float IL = 0;
 static float IR = 0;
 static float kpV = 740;
 static float kiV = 13808;
-
+static float kpT = 2.4;
+static float g = 9.81;
+static float l = 0.1;
+static float kiT = g+kpT*kpT/(4*l);
 static float Itheta = 0;
+static float IV = 0;
 
 void loop()
 {
@@ -176,6 +180,7 @@ void loop()
     IL = 0;
     IR = 0;
     Itheta = 0;
+    IV = 0;
   }
 
   // every UPDATE_TIME_MS, if the start_flag has been set, do the balancing
@@ -194,7 +199,23 @@ void loop()
     float PWM_right;
 
     
-    
+    float errTheta = angle_rad+IV*.1;
+    Itheta += errTheta*delta_t;
+    float vD = kpT*errTheta + kiT*Itheta;
+    float errL = vD-vL;
+    float errR = vD-vR;
+    IL += errL*delta_t;
+    IR += errR*delta_t;
+    PWM_left = errL*kpV + IL*kiV;
+    PWM_right = errR*kpV + IR*kiV;
+    IV += (vL+vR)/2*delta_t;
+
+    if(abs(PWM_left) > MOTOR_MAX) {
+      PWM_left = (PWM_left>0?1:-1)*MOTOR_MAX;
+    }
+    if(abs(PWM_right) > MOTOR_MAX) {
+      PWM_right = (PWM_right>0?1:-1)*MOTOR_MAX;
+    }
     
     
 
@@ -202,9 +223,9 @@ void loop()
     if(start_flag && fabs(angle_rad) > FORTY_FIVE_DEGREES_IN_RADIANS) // TODO: this was set to angle < -0.78... I changd it to angle_rad
     {
       // reset the accumulated errors here
-      start_flag = 0;   /// wait for restart
-      prev_time = 0;
-      motors.setSpeeds(0, 0);
+      //start_flag = 0;   /// wait for restart
+      //prev_time = 0;
+      //motors.setSpeeds(0, 0);
     } else if(start_flag) {
       motors.setSpeeds((int)PWM_left, (int)PWM_right);
     }
