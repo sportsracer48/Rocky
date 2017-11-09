@@ -177,17 +177,13 @@ void integrateGyro()
 
 void integrateEncoders()
 {
-  static int16_t lastCountsLeft;
-  int16_t countsLeft = encoders.getCountsLeft();
-  speedLeft = (countsLeft - lastCountsLeft);
-  distanceLeft += countsLeft - lastCountsLeft;
-  lastCountsLeft = countsLeft;
+  int16_t countsLeft = encoders.getCountsAndResetLeft();
+  speedLeft = countsLeft;
+  distanceLeft += countsLeft;
 
-  static int16_t lastCountsRight;
-  int16_t countsRight = encoders.getCountsRight();
-  speedRight = (countsRight - lastCountsRight);
-  distanceRight += countsRight - lastCountsRight;
-  lastCountsRight = countsRight;
+  int16_t countsRight = encoders.getCountsAndResetRight();
+  speedRight = countsRight;
+  distanceRight += countsRight;
   if(testSpeed > 0)
     displacement = displacement + distanceLeft;
   else

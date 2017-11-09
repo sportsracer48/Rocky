@@ -104,13 +104,30 @@ float testSpeed = 0;          // this is the desired motor speed
 static float IL = 0;
 static float IR = 0;
 static float kpV = 740;
-static float kiV = 13808;
+static float alpha  = 17;
+static float beta   = 1.0/400.0;
+static float kiV = alpha*(1+beta*kpV)*(1+beta*kpV)/(4*beta);
 static float kpT = 2.4;
 static float g = 9.81;
-static float l = 0.1;
+static float l = 0.089;
 static float kiT = g+kpT*kpT/(4*l);
 static float Itheta = 0;
 static float IV = 0;
+static float IVThreshold = 15.0/180.0*PI;
+static float kiEpsilon = 0.1; //0.1
+static float kdEpsilon = 0;
+static float epsilon = 0; //0;
+static float vD = 0;
+
+static float vOffset = .1;
+
+static float prevVL = 0;
+static float prevVR = 0;
+static float maxDeltaV = .2;
+
+float clamp(float a, float mi, float ma) {
+  return min(max(a,mi),ma);
+}
 
 void loop()
 {
@@ -137,14 +154,22 @@ void loop()
   bool shouldPrint = cur_time - prev_print_time > 105;
   if(shouldPrint)   // do the printing every 105 ms. Don't want to do it for an integer multiple of 10ms to not hog the processor
   {
-        Serial.print(angle_rad);   
+        Serial.print(cur_time);   
         Serial.print("\t");
-        Serial.print(angle);   
+        Serial.print(speedLeft);   
         Serial.print("\t");
-        Serial.print(speedLeft);
+        Serial.print(speedRight);
         Serial.print("\t");
-        Serial.print(angle_rad_accum);
-        Serial.println(testSpeed);
+        Serial.print(IL);
+        Serial.print("\t");
+        Serial.print(IR);
+        Serial.print("\t");
+        Serial.print(IV);
+        Serial.print("\t");
+        Serial.print(Itheta);
+        Serial.print("\t");
+        Serial.print(vD);
+        Serial.println("");
         prev_print_time = cur_time;
   }
 
@@ -193,22 +218,43 @@ void loop()
     // wee need to do some math to get them into m/s
     float vL = METERS_PER_CLICK*speedLeft/delta_t;
     float vR = METERS_PER_CLICK*speedRight/delta_t;
+
+    if(abs(vL-prevVL) > maxDeltaV) {
+      vL = prevVL;
+    }
+
+    if(abs(vR-prevVR) > maxDeltaV) {
+      vR = prevVR;
+    }
+
+    prevVL = vL;
+    prevVR = vR;
+
+    float v = (vL+vR)/2 - vOffset;
+
+    /*if(v<.01) {
+      IV *= 0.99;
+    }*/
+    
     
     // set PWM_left and PWM_right here
     float PWM_left;
     float PWM_right;
 
     
-    float errTheta = angle_rad+IV*.1;
+    float errTheta = angle_rad+IV*kiEpsilon+v*kdEpsilon;
+    //angle = angle * 999 / 1000;
+    
     Itheta += errTheta*delta_t;
-    float vD = kpT*errTheta + kiT*Itheta;
-    float errL = vD-vL;
-    float errR = vD-vR;
+    vD = kpT*errTheta + kiT*Itheta+vOffset;
+    float errL = (vD*1.3)-vL;
+    float errR = (vD*.70)-vR;
     IL += errL*delta_t;
     IR += errR*delta_t;
     PWM_left = errL*kpV + IL*kiV;
     PWM_right = errR*kpV + IR*kiV;
-    IV += (vL+vR)/2*delta_t;
+    IV += v*delta_t;
+    //IV = IV * 9995 / 10000;
 
     if(abs(PWM_left) > MOTOR_MAX) {
       PWM_left = (PWM_left>0?1:-1)*MOTOR_MAX;
@@ -235,6 +281,10 @@ void loop()
   if (buttonA.getSingleDebouncedPress())
   {
       motors.setSpeeds(0,0);
+      armed_flag = 0;
+      start_flag = 0;
+      start_counter = 0;
+      setup();
       while(!buttonA.getSingleDebouncedPress());
   }
 }
