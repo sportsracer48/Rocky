@@ -29,7 +29,7 @@
 #include "Balance.h"
 
 #define METERS_PER_CLICK 3.141592*80.0*(1/1000.0)/12.0/(162.5)
-#define MOTOR_MAX 300
+#define MOTOR_MAX 250
 #define MAX_SPEED 0.75  // m/s
 #define FORTY_FIVE_DEGREES_IN_RADIANS 0.78
 
@@ -103,27 +103,28 @@ float testSpeed = 0;          // this is the desired motor speed
 
 static float IL = 0;
 static float IR = 0;
-static float kpV = 740;
+static float kpV = 500;
 static float alpha  = 17;
 static float beta   = 1.0/400.0;
-static float kiV = alpha*(1+beta*kpV)*(1+beta*kpV)/(4*beta);
-static float kpT = 2.4;
+static float kiV = 5000;//alpha*(1+beta*kpV)*(1+beta*kpV)/(4*beta);
+static float kpT = 6;
 static float g = 9.81;
 static float l = 0.089;
-static float kiT = g+kpT*kpT/(4*l);
+static float kiT = 36;//g+kpT*kpT/(4*l);
 static float Itheta = 0;
 static float IV = 0;
 static float IVThreshold = 15.0/180.0*PI;
-static float kiEpsilon = 0.1; //0.1
+static float kiEpsilon = 0.2; //0.1
 static float kdEpsilon = 0;
 static float epsilon = 0; //0;
 static float vD = 0;
 
-static float vOffset = .1;
+static float vOffset = .2;
+static float turnRate = 0.04;
 
 static float prevVL = 0;
 static float prevVR = 0;
-static float maxDeltaV = .2;
+static float maxDeltaV = 4;
 
 float clamp(float a, float mi, float ma) {
   return min(max(a,mi),ma);
@@ -230,11 +231,7 @@ void loop()
     prevVL = vL;
     prevVR = vR;
 
-    float v = (vL+vR)/2 - vOffset;
-
-    /*if(v<.01) {
-      IV *= 0.99;
-    }*/
+    float v = (vL+vR)/2;
     
     
     // set PWM_left and PWM_right here
@@ -246,14 +243,14 @@ void loop()
     //angle = angle * 999 / 1000;
     
     Itheta += errTheta*delta_t;
-    vD = kpT*errTheta + kiT*Itheta+vOffset;
-    float errL = (vD*1.3)-vL;
-    float errR = (vD*.70)-vR;
+    vD = kpT*errTheta + kiT*Itheta;
+    float errL = (vD)-vL;
+    float errR = (vD)-vR;
     IL += errL*delta_t;
     IR += errR*delta_t;
     PWM_left = errL*kpV + IL*kiV;
     PWM_right = errR*kpV + IR*kiV;
-    IV += v*delta_t;
+    IV += (vOffset+v)*delta_t;
     //IV = IV * 9995 / 10000;
 
     if(abs(PWM_left) > MOTOR_MAX) {
