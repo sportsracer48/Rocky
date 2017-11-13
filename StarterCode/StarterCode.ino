@@ -42,7 +42,7 @@ extern int32_t distanceLeft;
 extern int32_t distanceRight;
 
 float testSpeed = 0;          // this is the desired motor speed
-float mode = 3; // 0 = balance, 1 = race, 2 = turn, 3 = sumo
+float mode = 0; // 0 = balance, 1 = race, 2 = turn, 3 = sumo
 
 static float IL = 0;
 static float IR = 0;
@@ -53,6 +53,7 @@ static float kiV = 5000;//alpha*(1+beta*kpV)*(1+beta*kpV)/(4*beta);
 static float kpT = 6;
 static float g = 9.81;
 static float l = 0.089;
+//static float l = 0.165;
 static float kiT = 36;//g+kpT*kpT/(4*l);
 static float Itheta = 0;
 static float IV = 0;
